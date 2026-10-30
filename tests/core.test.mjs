@@ -1,0 +1,13 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createWork,updateWork,emptyStore,selectWorks,metrics,candidates} from '../lib.mjs';
+const settings=emptyStore().settings;
+const sample={title:'공동담당 API 개선',assignees:[{team:'진료지원',name:'류한승'},{team:'시스템',name:'김시섭'}],category:'연동/API',status:'진행',created:'2026-10-01',activityDate:'2026-10-02'};
+test('공동담당은 고유업무 1건 / 파트 참여 2건',()=>{const m=metrics([createWork(sample,settings)]);assert.equal(m.total,1);assert.equal(m.participations,2);});
+test('다음 주 활동 추가도 고유업무는 1건이며 원본 활동이 보존된다',()=>{let w=createWork(sample,settings);w=updateWork(w,{...sample,activityDate:'2026-10-09'},settings,{sheet:'시스템',row:3});assert.equal(selectWorks([w],{from:'2026-10-01',to:'2026-10-31',basis:'activity'}).length,1);assert.equal(w.activities.length,2);assert.equal(w.activities[1].source.row,3);});
+test('기준일 이후 완료는 과거 KPI에 영향을 주지 않는다',()=>{const w=updateWork(createWork(sample,settings),{...sample,status:'완료',completed:'2026-10-15',activityDate:'2026-10-15'},settings);assert.equal(selectWorks([w],{asOf:'2026-10-10'})[0].status,'진행');assert.equal(selectWorks([w],{asOf:'2026-10-20'})[0].status,'완료');});
+test('완료일 필터는 완료 전이를 사용하고 재오픈 최신 상태를 구분한다',()=>{let w=updateWork(createWork(sample,settings),{...sample,status:'완료',completed:'2026-10-15',activityDate:'2026-10-15'},settings);w=updateWork(w,{...sample,status:'진행',activityDate:'2026-10-20',reason:'추가 오류 확인'},settings);const rows=selectWorks([w],{from:'2026-10-01',to:'2026-10-31',asOf:'2026-10-30',basis:'completed'});assert.equal(rows.length,1);assert.equal(metrics(rows)['완료'],0);});
+test('보류와 재오픈은 사유를 요구한다',()=>{assert.throws(()=>createWork({...sample,status:'보류'},settings),/사유/);const w=createWork({...sample,status:'완료'},settings);assert.throws(()=>updateWork(w,{...sample,activityDate:'2026-10-30'},settings),/사유/);});
+test('동일 제목은 후보만 반환하고 업무를 병합하지 않는다',()=>{const a=createWork(sample,settings),b=createWork(sample,settings);assert.notEqual(a.id,b.id);assert.equal(candidates(sample,[a,b]).length,2);});
+test('잘못된 날짜와 담당자는 거부한다',()=>{assert.throws(()=>createWork({...sample,created:'2026-02-30'},settings));assert.throws(()=>createWork({...sample,assignees:[{team:'시스템',name:'미등록'}]},settings));});
+test('취소 제외와 분모 0 완료율',()=>{assert.equal(selectWorks([createWork({...sample,status:'취소'},settings)]).length,0);assert.equal(metrics([]).rate,null);});
