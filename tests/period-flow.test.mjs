@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createWork,updateWork,emptyStore,periodFlow} from '../lib.mjs';
+const settings=emptyStore().settings;
+const input={title:'이월 업무',assignees:[{team:'시스템',name:'김도형'}],category:'기타',status:'접수',created:'2026-09-15',activityDate:'2026-09-15'};
+const query=m=>({from:'2026-'+m+'-01',to:'2026-'+m+'-'+(m==='09'?'30':'31'),asOf:'2026-10-31'});
+test('9월 미완료가 10월 완료돼도 9월 미완료 유지',()=>{const w=updateWork(createWork(input,settings),{...input,status:'완료',completed:'2026-10-10',activityDate:'2026-10-10'},settings);const sep=periodFlow([w],query('09')),oct=periodFlow([w],query('10'));assert.equal(sep.received,1);assert.equal(sep.remaining,1);assert.equal(sep.completed,0);assert.equal(oct.carry,1);assert.equal(oct.completed,1);assert.equal(oct.remaining,0);});
+test('완료로 처음 수입한 과거 접수 건도 완료일 이전 미완료로 계산',()=>{const w=createWork({...input,status:'완료',completed:'2026-10-15',activityDate:'2026-10-30'},settings);assert.equal(periodFlow([w],query('09')).remaining,1);assert.equal(periodFlow([w],query('10')).carry,1);});
+test('미완료는 최근 활동이 없어도 잔여에 포함, 파트필터 적용',()=>{const w=createWork(input,settings);assert.equal(periodFlow([w],query('10')).remaining,1);assert.equal(periodFlow([w],{...query('10'),team:'원무'}).remaining,0);});
+test('재오픈은 완료 실적과 기준일 미완료를 모두 유지',()=>{let w=updateWork(createWork(input,settings),{...input,status:'완료',completed:'2026-10-10',activityDate:'2026-10-10'},settings);w=updateWork(w,{...input,status:'진행',reason:'추가 조치',activityDate:'2026-10-20'},settings);const f=periodFlow([w],query('10'));assert.equal(f.completed,1);assert.equal(f.remaining,1);});

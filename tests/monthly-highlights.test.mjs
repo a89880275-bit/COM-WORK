@@ -1,0 +1,6 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {monthRange,monthlyHighlights} from '../lib.mjs';
+test('월 선택은 월 첫날·말일과 과거 월말 기준일을 계산한다',()=>{assert.deepEqual(monthRange('2024-02','2026-11-02'),{from:'2024-02-01',to:'2024-02-29',asOf:'2024-02-29'});assert.equal(monthRange('2026-11','2026-11-02').asOf,'2026-11-02');assert.throws(()=>monthRange('2026-13'));});
+test('파트별 빨간 제목 우선, 일반 업무 보완, 최대 3건씩 15건',()=>{const teams=['A','B','C','D','E'];const works=teams.flatMap(team=>Array.from({length:5},(_,i)=>({id:team+i,title:team+i,isMajor:i===4,assignees:[{team,name:team}],description:'원본 내용',activities:[]})));const rows=monthlyHighlights(works,teams,{from:'2026-10-01',to:'2026-10-31',asOf:'2026-10-31'});assert.equal(rows.length,15);for(const team of teams){const part=rows.filter(r=>r.team===team);assert.equal(part.length,3);assert.equal(part[0].work.isMajor,true);}});
+test('내용은 선택 월·기준일까지 최신 활동을 사용하고 데이터가 적으면 만들지 않는다',()=>{const rows=monthlyHighlights([{id:'1',assignees:[{team:'A'}],description:'기본 내용',activities:[{date:'2026-10-10',content:'이번 달 진행'},{date:'2026-11-01',content:'다음 달 내용'}]}],['A','B'],{from:'2026-10-01',to:'2026-10-31',asOf:'2026-10-31'});assert.equal(rows.length,1);assert.equal(rows[0].summary,'이번 달 진행');});

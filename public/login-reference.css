@@ -1,0 +1,27 @@
+/* Visual direction and background reference: https://ilsancha.site/ichacare911/ */
+.login-page{display:flex;justify-content:flex-end;align-items:center;min-height:100dvh;padding:34px max(5vw,28px);background:#0d355d url('/assets/login-background.jpg') center center/cover no-repeat;isolation:isolate}
+.login-page:before{background:linear-gradient(90deg,#051d3b30,#051d3b08 60%,#082e511c);mask-image:none;z-index:-1}
+.login-intro{display:none}
+.login-card{width:400px;max-width:100%;padding:36px 30px 27px;border:1px solid #ffffffdf;background:linear-gradient(135deg,#fffffffa,#f4fafff0);border-radius:22px;box-shadow:0 24px 70px #06244935;backdrop-filter:blur(14px);color:#143951}
+.login-card-brand{display:flex;justify-content:center;align-items:center;gap:12px;margin:0 auto 22px;color:#103d5b}
+.login-emblem{width:45px;height:45px;display:grid;place-items:center;background:linear-gradient(140deg,#087dc2,#053263);border-radius:12px;color:white;font-size:22px;font-weight:750;box-shadow:0 5px 16px #1c6ca32b}
+.login-card-brand>div{font-size:25px;line-height:1.2;letter-spacing:-.6px;font-weight:750}
+.login-card-brand sup{color:#08aab2;font-size:21px;margin-left:2px;vertical-align:top}
+.login-card-brand small{display:block;font-size:11px;letter-spacing:0;font-weight:500;color:#496a83;margin-top:7px;text-align:center}
+.login-card h2{font-size:15px;font-weight:500;text-align:center;letter-spacing:-.3px;margin:0;color:#39617a}
+.login-card>p{font-size:10px;text-align:center;color:#7a8e9e;margin:8px 0 26px}
+.login-card label{color:#47647a;font-size:11px;margin-bottom:17px;gap:7px}
+.login-card input,.login-card select{height:44px;border:1px solid #c9d9e6;border-radius:8px;color:#193c55;background:#ffffffbf;box-shadow:inset 0 1px 2px #152f4905;padding:10px 12px;color-scheme:light;font-size:12px}
+.login-card input::placeholder{color:#8ca0b1}
+.login-card select option{color:#193c55;background:#ffffff}
+.login-card input:focus,.login-card select:focus{outline:2px solid #1a86ba55;outline-offset:1px;border-color:#299ac4}
+.login-card button[type=submit]{height:46px;background:linear-gradient(105deg,#087bb8,#063368);border:1px solid #17689d;border-radius:8px;color:white;font-size:14px;letter-spacing:.6px;box-shadow:0 6px 14px #0b5b8c20;margin-top:4px}
+.login-card button[type=submit]:hover{background:linear-gradient(105deg,#118ec9,#0b477f);border-color:#2a88b7}
+.login-help{color:#7790a4;border-color:#d9e4ec;text-align:center;font-size:10px;margin-top:15px;padding:16px 0 18px}
+.login-help b{color:#1b657d}
+.login-card>small{color:#8a9eae;font-size:9px;margin-top:18px}
+#login-error{color:#b93a4a;font-size:11px;min-height:18px}
+@media(min-width:1600px){.login-page{padding-right:8vw}.login-card{width:430px;padding:42px 34px 30px}}
+@media(max-width:800px){.login-page{padding:24px;justify-content:center;background-position:42% center}.login-card{background:linear-gradient(135deg,#fffffffa,#f4fafff5);width:390px;padding:30px 25px}}
+@media(max-height:650px){.login-page{padding:18px 5vw}.login-card{padding:23px 26px 18px}.login-card-brand{margin-bottom:14px}.login-card>p{margin-bottom:18px}.login-card label{margin-bottom:12px}.login-help{padding:12px 0;margin-top:10px}}
+.login-page-title{position:absolute;top:28px;left:34px;z-index:2;display:flex;align-items:center;gap:12px;color:#fff;font-size:24px;font-weight:700;letter-spacing:-.6px;text-shadow:0 2px 10px #06244299}.login-page-title small{display:block;font-size:9px;letter-spacing:2.4px;color:#c0def2;font-weight:500;margin-top:5px}.login-title-mark{width:43px;height:43px;display:grid;place-items:center;font-size:21px;letter-spacing:-1px;border-radius:11px;border:1px solid #ffffff55;background:#0b579b66;backdrop-filter:blur(7px)}@media(max-width:800px){.login-page{padding-top:105px}.login-page-title{top:22px;left:24px;font-size:20px}.login-title-mark{width:36px;height:36px;font-size:18px}}@media(max-height:650px) and (min-width:801px){.login-page-title{top:20px;left:25px;font-size:20px}}
