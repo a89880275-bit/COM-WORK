@@ -7,6 +7,8 @@ import {createHash,randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import {emptyStore,createWork,updateWork,candidates,dateOK,id,today,validateExcelMapping,normalizeExcelDate,isStatisticsSheet,prepareImportedWork,normalizeWeekLabel,includeWeeklyRow,isExcludedUploadStatus,prepareScheduledImport,classifyWorkStatus} from './lib.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url)), dataDir=process.env.IT_DATA_DIR||path.join(root,'data'), port=Number(process.env.PORT||4317);
+const allowedOrigins=new Set([`http://127.0.0.1:${port}`,`http://localhost:${port}`,...String(process.env.IT_PUBLIC_ORIGINS||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>{const u=new URL(s);if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('IT_PUBLIC_ORIGINS에는 접속 원점만 입력하세요.');return u.origin;})]);
+const allowedHosts=new Set([...allowedOrigins].map(s=>new URL(s).host));
 await fs.mkdir(path.join(dataDir,'backups'),{recursive:true});await fs.mkdir(path.join(root,'tmp'),{recursive:true});
 const storeFile=path.join(dataDir,'work-data.json');
 let store;try{store=JSON.parse(await fs.readFile(storeFile,'utf8'));if(store.schema!==1||!Array.isArray(store.works))throw Error('지원하지 않는 데이터 파일');}catch(e){if(e.code!=='ENOENT')throw e;store=emptyStore();await fs.writeFile(storeFile,JSON.stringify(store,null,2));}
@@ -50,9 +52,9 @@ function issueSession(name,res){for(const [key,value] of sessions)if(value.expir
 if(loginUsers(store.settings).some(u=>!store.auth?.[u.name]))await mutate('로그인 계정 초기화',syncAccounts);
 const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1');const p=url.pathname;
- if(req.headers.host!==`127.0.0.1:${port}`&&req.headers.host!==`localhost:${port}`)return json(res,403,{error:'로컬 접속만 허용됩니다.'});
+ if(!allowedHosts.has(req.headers.host))return json(res,403,{error:'허용된 접속 주소가 아닙니다.'});
 
- const allowedOrigin=!req.headers.origin||[`http://127.0.0.1:${port}`,`http://localhost:${port}`].includes(req.headers.origin);
+ const allowedOrigin=!req.headers.origin||allowedOrigins.has(req.headers.origin);
  if(req.method!=='GET'&&!allowedOrigin)return json(res,403,{error:'허용하지 않는 요청입니다.'});
  const cookie=String(req.headers.cookie||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('it_session='))?.slice(11);
  let session=sessions.get(cookie);const user=session&&session.expires>Date.now()?loginUsers(store.settings).find(u=>u.name===session.name&&store.auth[u.name]?.version===session.version):null;
