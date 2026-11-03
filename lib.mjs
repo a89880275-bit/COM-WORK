@@ -97,6 +97,10 @@ export function prepareImportedWork(input,period){
 export function prepareScheduledImport(input,week){
  return String(week||'').replace(/\s/g,'')==='예정'&&input.status!=='완료'?{...input,completed:''}:input;
 }
+export function validateImportStatusDate(input,week){
+ if(String(week||'').replace(/\s/g,'')==='예정'||isExcludedUploadStatus(input.status))return;
+ if(classifyWorkStatus(input.status)!=='완료'&&String(input.completed||'').trim())throw Error('상태는 미완료인데 완료일이 입력되어 있습니다. 실제 완료라면 상태를 완료로, 미완료라면 완료일을 비운 뒤 다시 검증하세요.');
+}
 export function validateWork(input,settings){
  input={...input,status:classifyWorkStatus(input.status)};
  const title=String(input.title||'').trim();if(!title||title.length>300)throw Error('업무 제목은 1~300자로 입력해 주세요.');
@@ -117,6 +121,9 @@ export function validateWork(input,settings){
 }
 export function createWork(input,settings,source=null){const w=validateWork(input,settings);if(w.status==='완료'&&w.completed>(input.activityDate||w.created))throw Error('완료일은 활동일 이후일 수 없습니다.');return {...w,id:id(),version:1,updatedAt:new Date().toISOString(),source,history:[{date:w.status==='완료'?w.completed:input.activityDate||w.created,status:w.status,reason:w.reason}],activities:[{date:input.activityDate||w.created,content:w.description,source}]};}
 export function updateWork(old,input,settings,source=null){
+ // 최초 엑셀 예정 기록의 업로드일은 실제 업무 발생일이 아니다.
+ // 사용자가 후속 변경한 이력이 없는 경우에만 최초 상태를 등록일로 보정한다.
+ if(source&&old.source&&old.history.length===1&&classifyWorkStatus(old.status)==='예정'&&classifyWorkStatus(old.history[0].status)==='예정'&&classifyWorkStatus(input.status)==='완료'&&dateOK(input.completed)&&input.completed>=old.created&&input.completed<old.history[0].date){old={...old,history:[{...old.history[0],date:old.created}]};}
  const effective=structuredClone(settings);
  for(const a of old.assignees){if(!effective.people[a.team]?.includes(a.name))effective.people[a.team]=[...(effective.people[a.team]||[]),a.name];}
  if(!effective.categories.includes(old.category))effective.categories.push(old.category);
@@ -153,4 +160,8 @@ export function selectWorks(works,{from='0000-01-01',to='9999-12-31',asOf=to,bas
  return works.map(w=>({...w,status:statusAt(w,asOf)})).filter(w=>w.status&&(w.status!=='취소'||status==='취소')&&w.created<=asOf&&(!team||w.assignees.some(a=>a.team===team))&&(!status||(status==='기타'?['접수','예정','보류'].includes(w.status):w.status===status))&&(!kind||w.kind===kind)&&(!q||`${w.title} ${w.id} ${w.assignees.map(a=>a.name)} ${w.tags}`.toLowerCase().includes(q.toLowerCase()))&&(basis==='activity'?w.activities.some(a=>a.date>=from&&a.date<=to&&a.date<=asOf):basis==='completed'?w.history.some(h=>h.status==='완료'&&h.date>=from&&h.date<=to&&h.date<=asOf):w.created>=from&&w.created<=to));
 }
 export function metrics(works){const counts=Object.fromEntries(statuses.map(s=>[s,works.filter(w=>classifyWorkStatus(w.status)===s).length]));return {total:works.length,...counts,rate:works.length?Math.round(counts['완료']/works.length*100):null,participations:works.reduce((s,w)=>s+new Set(w.assignees.map(a=>a.team)).size,0)};}
+export function autoCompleteChoices(rows,works){
+ const targets=rows.map(r=>{if(r.error||classifyWorkStatus(r.input.status)!=='완료')return null;const matches=works.filter(w=>classifyWorkStatus(w.status)==='예정'&&w.title.trim()===r.input.title.trim());return matches.length===1?matches[0].id:null;});
+ return rows.map((r,i)=>({...r,autoChoice:targets[i]&&targets.filter(t=>t===targets[i]).length===1?{action:'update',target:targets[i]}:null}));
+}
 export function candidates(row,works){return works.filter(w=>(row.externalId&&w.externalId===row.externalId)||w.title.replace(/\s/g,'')===row.title?.replace(/\s/g,'')).map(w=>({id:w.id,title:w.title,assignees:w.assignees,status:w.status}));}
