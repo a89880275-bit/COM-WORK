@@ -1,6 +1,6 @@
 let workAssignee='';
 import {annualDashboard,incidentList,referenceKpis,noticesPage,statisticsPage} from '/dashboard.js';
-import {teams as partOptions,selectWorks,metrics,statuses,monthRange,monthlyHighlights,periodFlow,classifyWorkStatus,yearRange,incidentWorks,filterByAssignee,sortWorkList} from '/lib.mjs';
+import {teams as partOptions,selectWorks,metrics,statuses,monthRange,monthlyHighlights,periodFlow,classifyWorkStatus,yearRange,incidentWorks,filterByAssignee,sortWorkList,weeklyWorkList} from '/lib.mjs';
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let annualPerson='',dashboardYear='',state, page='대시보드', search='',statusFilter='',kind='',period='month',filters={},upload=null,reportDraft='',busy=false;
 const menu=[['▦','대시보드'],['▤','주간/월간 업무보고'],['☷','업무 목록'],['↥','엑셀 업로드'],['▧','보고서 보관함'],['▥','통계 분석'],['▣','장비지원 분석'],['▧','게시판 / 공지'],['✦','AI 업무분석'],['⚙','관리자 설정']];
@@ -12,7 +12,7 @@ async function api(url,method='GET',data){const r=await fetch(url,{method,header
 async function refresh(){try{state=await api('/api/state');}catch(e){if(e.status===401){state=null;await loginView();return;}throw e;}state.works=state.works.map(w=>({...w,status:classifyWorkStatus(w.status)}));if(!filters.from)setPeriod('month');render();}
 function setPeriod(value){period=value;const now=state.today;let from,to=now;if(value==='year'){filters={...filters,...yearRange(now.slice(0,4),now)};return;}if(value==='month'){from=now.slice(0,7)+'-01';to=new Date(Date.UTC(+now.slice(0,4),+now.slice(5,7),0)).toISOString().slice(0,10);}else if(value==='week'){const d=new Date(now+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));from=d.toISOString().slice(0,10);d.setUTCDate(d.getUTCDate()+6);to=d.toISOString().slice(0,10);}else return;filters={...filters,from,to,asOf:now,basis:filters.basis||'activity'};}
 const effectiveFilters=()=>({...filters,q:search,status:statusFilter,kind,...(period==='month'||period==='year'||page==='주간/월간 업무보고'?{mode:'flow'}:{})});
-const selected=()=>{const rows=period==='month'||period==='year'||page==='주간/월간 업무보고'?periodFlow(state.works,effectiveFilters()).rows:selectWorks(state.works,effectiveFilters());return page==='업무 목록'?sortWorkList(filterByAssignee(rows,workAssignee)):rows;};
+const selected=()=>{if(page==='업무 목록'&&period==='week')return sortWorkList(filterByAssignee(weeklyWorkList(state.works,effectiveFilters()),workAssignee));const rows=period==='month'||period==='year'||page==='주간/월간 업무보고'?periodFlow(state.works,effectiveFilters()).rows:selectWorks(state.works,effectiveFilters());return page==='업무 목록'?sortWorkList(filterByAssignee(rows,workAssignee)):rows;};
 function previousWorks(){if(period==='month'){const d=new Date(filters.from+'T00:00:00Z');d.setUTCMonth(d.getUTCMonth()-1);const range=monthRange(d.toISOString().slice(0,7),state.today);return periodFlow(state.works,{...effectiveFilters(),...range}).rows;}const start=new Date(filters.from+'T00:00:00Z'),end=new Date(filters.to+'T00:00:00Z'),days=(end-start)/86400000+1;const to=new Date(start-86400000).toISOString().slice(0,10),from=new Date(start-days*86400000).toISOString().slice(0,10);return selectWorks(state.works,{...filters,from,to,asOf:to});}
 function render(){
  const works=selected(),m=metrics(works);

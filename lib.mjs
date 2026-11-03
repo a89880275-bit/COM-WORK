@@ -127,6 +127,14 @@ export function updateWork(old,input,settings,source=null){
  if(old.status==='완료'&&w.status==='완료'&&old.completed!==w.completed)throw Error('완료일 변경은 재오픈한 뒤 다시 완료 처리해 주세요.');
  return {...old,...w,version:old.version+1,updatedAt:new Date().toISOString(),history:[...old.history,...(old.status!==w.status?[{date:statusDate,status:w.status,reason:w.reason}]:[])],activities:[...old.activities,{date,content:w.reason||w.description,source}]};
 }
+export function weeklyWorkList(works,filters){
+ const cutoff=[filters.to,filters.asOf||filters.to].sort()[0];
+ return selectWorks(works,{...filters,from:'0000-01-01',to:cutoff,asOf:cutoff,basis:'created'}).filter(w=>{
+  if(w.status!=='완료')return true;
+  const completed=w.completed&&w.completed<=cutoff?w.completed:w.history.filter(h=>classifyWorkStatus(h.status)==='완료'&&h.date<=cutoff).at(-1)?.date;
+  return completed>=filters.from&&completed<=cutoff;
+ });
+}
 export function statusAt(w,asOf){const status=[...w.history].filter(h=>h.date<=asOf).at(-1)?.status;return status===undefined?null:classifyWorkStatus(status);}
 export function periodFlow(works,{from,to,asOf=to,team='',kind='',q='',status=''}={}){
  const cutoff=asOf<to?asOf:to,prior=new Date(Date.parse(from+'T00:00:00Z')-86400000).toISOString().slice(0,10);
