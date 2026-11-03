@@ -58,7 +58,7 @@ export function filterByAssignee(works,key=''){
 }
 export function sortWorkList(works){
  const date=w=>classifyWorkStatus(w.status)==='완료'&&dateOK(w.completed)?w.completed:w.created||'';
- return [...works].sort((a,b)=>date(b).localeCompare(date(a))||(b.created||'').localeCompare(a.created||'')||String(a.id).localeCompare(String(b.id)));
+ return [...works].sort((a,b)=>Number(classifyWorkStatus(b.status)==='예정')-Number(classifyWorkStatus(a.status)==='예정')||date(b).localeCompare(date(a))||(b.created||'').localeCompare(a.created||'')||String(a.id).localeCompare(String(b.id)));
 }
 export function monthlyHighlights(works,teams,filters){
  return teams.flatMap(team=>works.filter(w=>w.assignees.some(a=>a.team===team)).sort((a,b)=>Number(b.isMajor===true)-Number(a.isMajor===true)||(b.updatedAt||'').localeCompare(a.updatedAt||'')||a.id.localeCompare(b.id)).slice(0,3).map(work=>{

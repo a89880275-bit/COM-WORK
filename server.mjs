@@ -74,7 +74,7 @@ const server=http.createServer(async(req,res)=>{try{
  if(p==='/api/auth/reset'&&req.method==='POST'){
   if(user.role!=='admin')return json(res,403,{error:'관리자만 비밀번호를 초기화할 수 있습니다.'});const input=JSON.parse(await body(req,4096));if(!loginUsers(store.settings).some(u=>u.name===input.name))throw Error('등록된 담당자를 선택하세요.');await mutate('비밀번호 초기화: '+input.name,s=>{s.auth[input.name]={...hashPassword('1'),version:s.auth[input.name].version+1};});invalidateSessions(input.name);return json(res,200,{ok:true});
  }
- if(p==='/api/state'&&req.method==='GET'){const {auth,...visible}=store;return json(res,200,{...visible,token:session.csrf,currentUser:user,accounts:user.role==='admin'?accountUsers(store.settings):[],today:today(),storage:'data/work-data.json'});}
+ if(p==='/api/state'&&req.method==='GET'){const {auth,deletedWorks,...visible}=store;return json(res,200,{...visible,deletedWorks:user.role==='admin'?(deletedWorks||[]):[],token:session.csrf,currentUser:user,accounts:user.role==='admin'?accountUsers(store.settings):[],today:today(),storage:'data/work-data.json'});}
  if(p==='/api/backup'&&req.method==='GET'){if(user.role!=='admin')return json(res,403,{error:'관리자 전용 기능입니다.'});const {auth,...visible}=store;res.setHeader('Content-Disposition',`attachment; filename="it-work-backup-${today()}.json"`);return json(res,200,visible);}
  if(p.startsWith('/api/')&&req.method!=='GET'&&user.role==='leader')return json(res,403,{error:'팀장은 조회 전용입니다. 등록·수정·저장할 수 없습니다.'});
  if(p.startsWith('/api/')&&req.method!=='GET'&&user.role!=='admin'&&!p.startsWith('/api/works'))return json(res,403,{error:'관리자 전용 기능입니다.'});
@@ -82,6 +82,18 @@ const server=http.createServer(async(req,res)=>{try{
   const input=JSON.parse(await body(req));const title=String(input.title||'').trim(),content=String(input.content||'').trim();if(!title||title.length>150||!content||content.length>10000)throw Error('제목(150자 이내)과 내용(10,000자 이내)을 입력해 주세요.');
   if(!['공지','안내','이슈'].includes(input.category))throw Error('공지 구분을 확인해 주세요.');
   const notice=await mutate('공지사항 저장',s=>{s.notices??=[];const existing=req.method==='PUT'?s.notices.find(n=>n.id===p.split('/').at(-1)):null;if(req.method==='PUT'&&(!existing||existing.version!==input.version))throw Error('다른 창에서 수정되었습니다. 새로고침해 주세요.');const n={id:existing?.id||id(),title,content,category:input.category,pinned:input.pinned===true,archived:input.archived===true,date:existing?.date||today(),updatedAt:new Date().toISOString(),version:(existing?.version||0)+1};if(existing)s.notices[s.notices.indexOf(existing)]=n;else s.notices.push(n);return n;});return json(res,200,notice);
+ }
+ if(['/api/works/delete-selected','/api/works/restore-selected'].includes(p)&&req.method==='POST'){
+  if(p.endsWith('/restore-selected')&&user.role!=='admin')return json(res,403,{error:'관리자만 업무를 복구할 수 있습니다.'});
+  const input=JSON.parse(await body(req));if(!Array.isArray(input.ids)||!input.ids.length||input.ids.length>20000||input.ids.some(v=>typeof v!=='string')||new Set(input.ids).size!==input.ids.length)throw Error('삭제·복구할 업무를 선택하세요.');
+  const restore=p.endsWith('/restore-selected');
+  if(!restore&&user.role!=='admin'&&input.ids.some(wid=>!store.works.find(w=>w.id===wid)?.assignees.some(a=>a.name===user.name)))return json(res,403,{error:'본인이 담당하는 업무만 삭제할 수 있습니다.'});
+  await mutate(`${restore?'업무 복구':'업무 선택 삭제'}: ${user.name} · ${input.ids.length}건`,s=>{
+   if(input.revision!==s.revision)throw Error('데이터가 변경되었습니다. 새로고침 후 다시 선택하세요.');s.deletedWorks??=[];
+   const ids=new Set(input.ids);
+   if(restore){const items=s.deletedWorks.filter(v=>ids.has(v.id));if(items.length!==ids.size||items.some(v=>s.works.some(w=>w.id===v.work.id)))throw Error('복구할 업무가 변경되었습니다. 새로고침하세요.');s.works.push(...items.map(v=>v.work));s.deletedWorks=s.deletedWorks.filter(v=>!ids.has(v.id));}
+   else{const items=s.works.filter(w=>ids.has(w.id));if(items.length!==ids.size)throw Error('삭제할 업무가 변경되었습니다. 새로고침하세요.');if(user.role!=='admin'&&items.some(w=>!w.assignees.some(a=>a.name===user.name)))throw Error('본인이 담당하는 업무만 삭제할 수 있습니다.');const deletedAt=new Date().toISOString();s.deletedWorks.push(...items.map(work=>({id:id(),work,deletedAt,deletedBy:user.name})));s.works=s.works.filter(w=>!ids.has(w.id));}
+  });return json(res,200,{ok:true,count:input.ids.length});
  }
  if(p==='/api/works'&&req.method==='POST'){const input=JSON.parse(await body(req));const work=await mutate('업무 등록',s=>{if(user.role!=='admin'&&!input.assignees?.some(a=>a.name===user.name))throw Error('본인이 담당하는 업무만 등록할 수 있습니다.');const w=createWork(input,s.settings);s.works.push(w);return w;});return json(res,201,work);}
  if(p.startsWith('/api/works/')&&req.method==='PUT'){const input=JSON.parse(await body(req)),wid=p.split('/').at(-1);const work=await mutate('업무 수정',s=>{const i=s.works.findIndex(w=>w.id===wid);if(i<0)throw Error('업무가 없습니다.');if(user.role!=='admin'&&(!s.works[i].assignees.some(a=>a.name===user.name)||!input.assignees?.some(a=>a.name===user.name)))throw Error('본인이 담당하는 업무만 수정할 수 있습니다.');if(input.version!==s.works[i].version)throw Error('다른 창에서 수정되었습니다. 새로고침해 주세요.');return s.works[i]=updateWork(s.works[i],input,s.settings);});return json(res,200,work);}
