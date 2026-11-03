@@ -1,6 +1,6 @@
 export const teams=['진료간호','원무','진료지원','행정','시스템'];
 export const people={'진료간호':['이창주','황진솔','장효은'],'원무':['이장우','김완중'],'진료지원':['류한승','신혜린'],'행정':['임영택','김예성'],'시스템':['김시섭','김도형']};
-export const categories=['오류수정','기능개선','신규개발','데이터요청','통계/실적','권한관리','정책/수가반영','연동/API','사용자지원','서버/시스템','교육/회의','장애대응','배치/자동화','기타'];
+export const categories=['오류수정','기능개선','신규개발','데이터요청','통계/실적','권한관리','정책/수가반영','연동/API','사용자지원','서버/시스템','교육/회의','장애대응','배치/자동화','기타','일반관리'];
 export const statuses=['접수','진행','완료','예정','보류','취소'];
 export const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export const id=()=>globalThis.crypto.randomUUID();

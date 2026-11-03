@@ -50,6 +50,7 @@ const sessions=new Map(),attempts=new Map();
 function invalidateSessions(name){for(const [key,value] of sessions)if(value.name===name)sessions.delete(key);}
 function issueSession(name,res){for(const [key,value] of sessions)if(value.expires<Date.now())sessions.delete(key);const key=randomBytes(32).toString('hex');sessions.set(key,{name,version:store.auth[name].version,csrf:randomBytes(32).toString('hex'),expires:Date.now()+8*3600000});res.setHeader('Set-Cookie',`it_session=${key}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800`);}
 if(loginUsers(store.settings).some(u=>!store.auth?.[u.name]))await mutate('로그인 계정 초기화',syncAccounts);
+if(!store.settings.categories.includes('일반관리'))await mutate('업무구분 일반관리 추가',s=>{s.settings.categories.push('일반관리');});
 const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://127.0.0.1');const p=url.pathname;
  if(!allowedHosts.has(req.headers.host))return json(res,403,{error:'허용된 접속 주소가 아닙니다.'});
