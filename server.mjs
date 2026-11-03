@@ -36,7 +36,7 @@ function mappedRows(staged,options){
    if(options.historical&&(status!=='완료'||!dateOK(normalizeDate(get('completed')))||normalizeDate(get('completed'))<options.completionFrom||normalizeDate(get('completed'))>options.completionTo))continue;
    if(options.weeklyOnly&&!includeWeeklyRow(get('week'),status,options.weekLabel))continue;
    const cat=get('category');const category=store.settings.categories[Number(cat)-1]||cat||'기타';
-   const input=prepareImportedWork({title:get('title'),isMajor:(raw.redColumns||[]).includes(Number(map.title)),assignees,status,category,created:normalizeDate(get('created'))||options.period,activityDate:options.period,completed:normalizeDate(get('completed')),description:get('description'),reason:get('reason'),kind:options.kind||'개발업무',externalId:get('externalId')},options.period);
+   const input=prepareImportedWork({title:get('title'),isMajor:(raw.redColumns||[]).includes(Number(map.title)),assignees,status,category,created:normalizeDate(get('created'))||options.period,activityDate:options.period,completed:normalizeDate(get('completed')),requestDept:get('requestDept'),description:get('description'),reason:get('reason'),kind:options.kind||'개발업무',externalId:get('externalId')},options.period);
    Object.assign(input,prepareScheduledImport(input,get('week')));
    if(options.historical)input.activityDate=input.completed;
    let error='';try{createWork(input,store.settings);}catch(e){error=e.message;}

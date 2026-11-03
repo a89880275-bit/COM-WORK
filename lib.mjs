@@ -69,7 +69,7 @@ export function monthlyHighlights(works,teams,filters){
 }
 export function validateExcelMapping(input){
  const header=Number(input.header);if(!Number.isInteger(header)||header<1||header>20000)throw Error('공통 헤더 행은 1~20,000 사이로 입력하세요.');
- const keys=['title','assignees','status','category','created','completed','description','reason','externalId','week'];
+ const keys=['title','assignees','status','category','created','completed','requestDept','description','reason','externalId','week'];
  const map=Object.fromEntries(keys.map(k=>[k,Number(input.map?.[k]??-1)]));
  if(Object.values(map).some(v=>!Number.isInteger(v)||v< -1||v>149))throw Error('연결 컬럼은 1~150열 범위로 지정하세요.');
  const assigneeSource=input.assigneeSource==='sheet'?'sheet':'column';
