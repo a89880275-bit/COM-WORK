@@ -80,7 +80,8 @@ export function validateExcelMapping(input){
 }
 export function emptyStore(){return {schema:1,revision:0,settings:{teams,people,categories,teamLeaderName:""},works:[],batches:[],reports:[],notices:[],audit:[]};}
 export function normalizeWeekLabel(value){const match=String(value||'').replace(/\s/g,'').match(/^(\d{1,2})월(\d)주(?:차)?$/);return match&&Number(match[1])>=1&&Number(match[1])<=12&&Number(match[2])>=1&&Number(match[2])<=6?`${Number(match[1])}월${Number(match[2])}주`:'';}
-export function includeWeeklyRow(week,status,selected){return normalizeWeekLabel(week)===normalizeWeekLabel(selected)&&!!normalizeWeekLabel(selected)||String(week).replace(/\s/g,'')==='예정'||status==='예정';}
+export function filenameWeekLabel(filename){const matches=[...String(filename||'').matchAll(/(\d{1,2})\s*월\s*(\d)\s*주(?:\s*차)?/g)].map(m=>normalizeWeekLabel(m[0])).filter(Boolean);return [...new Set(matches)].length===1?matches[0]:'';}
+export function includeWeeklyRow(week,status,selected){return !!normalizeWeekLabel(selected)&&(normalizeWeekLabel(week)===normalizeWeekLabel(selected)||String(week||'').replace(/\s/g,'')==='예정');}
 export function dateOK(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;}
 export function normalizeExcelDate(value){
  const text=String(value??'').trim();
