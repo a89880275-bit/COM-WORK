@@ -60,12 +60,25 @@ export function sortWorkList(works){
  const date=w=>classifyWorkStatus(w.status)==='완료'&&dateOK(w.completed)?w.completed:w.created||'';
  return [...works].sort((a,b)=>Number(classifyWorkStatus(b.status)==='예정')-Number(classifyWorkStatus(a.status)==='예정')||date(b).localeCompare(date(a))||(b.created||'').localeCompare(a.created||'')||String(a.id).localeCompare(String(b.id)));
 }
-export function monthlyHighlights(works,teams,filters){
- return teams.flatMap(team=>works.filter(w=>w.assignees.some(a=>a.team===team)).sort((a,b)=>Number(b.isMajor===true)-Number(a.isMajor===true)||(b.updatedAt||'').localeCompare(a.updatedAt||'')||a.id.localeCompare(b.id)).slice(0,3).map(work=>{
+export function reportEligibleWorks(works,departedNames=[]){
+ const departed=new Set(departedNames);
+ return works.filter(w=>classifyWorkStatus(w.status)!=='예정'||!w.assignees.length||w.assignees.some(a=>!departed.has(a.name)));
+}
+export function reportPeriodFlow(works,filters,departedNames=[]){
+ const flow=periodFlow(works,{...filters,status:''}),allowed=new Set(reportEligibleWorks(flow.rows,departedNames).map(w=>w.id));
+ const excluded=new Set(flow.rows.filter(w=>!allowed.has(w.id)).map(w=>w.id));
+ return excluded.size?periodFlow(works.filter(w=>!excluded.has(w.id)),filters):filters.status?periodFlow(works,filters):flow;
+}
+export function monthlyHighlights(works,teams,filters,departedNames=[]){
+ return teams.flatMap(team=>reportEligibleWorks(works,departedNames).filter(w=>w.isMajor===true&&w.assignees.some(a=>a.team===team)).sort((a,b)=>Number(b.isMajor===true)-Number(a.isMajor===true)||(b.updatedAt||'').localeCompare(a.updatedAt||'')||a.id.localeCompare(b.id)).slice(0,3).map(work=>{
   const activity=[...(work.activities||[])].filter(a=>a.date>=filters.from&&a.date<=filters.to&&a.date<=filters.asOf&&a.content?.trim()).sort((a,b)=>b.date.localeCompare(a.date))[0];
   const content=String(activity?.content||work.description||'').replace(/\s+/g,' ').trim();
   return {team,work,summary:content.length>180?content.slice(0,180)+'…':content};
  })).slice(0,15);
+}
+export function majorReportText(works,departedNames=[]){
+ const major=reportEligibleWorks(works,departedNames).filter(w=>w.isMajor===true),line=w=>`- ${w.title} (${w.assignees.map(a=>a.name).join(', ')} · ${w.status})`;
+ return '주요 성과\n'+major.filter(w=>classifyWorkStatus(w.status)==='완료').map(line).join('\n')+'\n\n진행 중 핵심 과제\n'+major.filter(w=>classifyWorkStatus(w.status)!=='완료').map(line).join('\n')+'\n\n주요 이슈 및 지원 필요사항\n\n다음 달 계획\n';
 }
 export function validateExcelMapping(input){
  const header=Number(input.header);if(!Number.isInteger(header)||header<1||header>20000)throw Error('공통 헤더 행은 1~20,000 사이로 입력하세요.');
