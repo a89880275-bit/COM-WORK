@@ -66,3 +66,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=month]::-webkit-c
 :is(.annual-kpis,.flow-kpis)>.panel:hover>span{color:#f1f5f9}
 :is(.annual-kpis,.flow-kpis)>.panel:hover>p{color:#d3dfed}
 @media(prefers-reduced-motion:reduce){:is(.annual-kpis,.flow-kpis)>.panel{transition:none}}
+
+/* Dashboard chart panels use the count-card hover treatment. */
+:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel:hover{background:rgba(255,255,255,.3);border-color:#f5b583;box-shadow:0 0 0 1px #f5b583}
+:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel:hover h2{color:#f1f5f9}
+:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel:hover :is(.panel-head p,.highlights-footnote){color:#d3dfed}
+@media(prefers-reduced-motion:reduce){:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel{transition:none}}
