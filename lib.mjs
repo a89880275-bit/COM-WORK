@@ -180,8 +180,14 @@ export function selectWorks(works,{from='0000-01-01',to='9999-12-31',asOf=to,bas
 }
 export function metrics(works){const counts=Object.fromEntries(statuses.map(s=>[s,works.filter(w=>classifyWorkStatus(w.status)===s).length]));return {total:works.length,...counts,rate:works.length?Math.round(counts['완료']/works.length*100):null,participations:works.reduce((s,w)=>s+new Set(w.assignees.map(a=>a.team)).size,0)};}
 function sameImportDescription(a,b){return String(a||'').replace(/\r\n?/g,'\n').trim()===String(b||'').replace(/\r\n?/g,'\n').trim();}
+function completionDescriptionMatches(previous,incoming){
+ if(sameImportDescription(previous,incoming))return true;
+ const before=String(previous||'').replace(/\r\n?/g,'\n').trim();
+ const after=String(incoming||'').replace(/\r\n?/g,'\n').trim();
+ return !!before&&after.startsWith(before+'\n');
+}
 export function autoCompleteChoices(rows,works){
- const targets=rows.map(r=>{if(r.error||classifyWorkStatus(r.input.status)!=='완료')return null;const matches=works.filter(w=>classifyWorkStatus(w.status)==='예정'&&w.title.trim()===r.input.title.trim()&&sameImportDescription(w.description,r.input.description));return matches.length===1?matches[0].id:null;});
+ const targets=rows.map(r=>{if(r.error||classifyWorkStatus(r.input.status)!=='완료')return null;const matches=works.filter(w=>['예정','진행'].includes(classifyWorkStatus(w.status))&&w.title.trim()===r.input.title.trim()&&completionDescriptionMatches(w.description,r.input.description));return matches.length===1?matches[0].id:null;});
  return rows.map((r,i)=>({...r,autoChoice:targets[i]&&targets.filter(t=>t===targets[i]).length===1?{action:'update',target:targets[i]}:null}));
 }
 export function candidates(row,works){return works.filter(w=>sameImportDescription(w.description,row.description)&&((hasDocumentNumber(row.externalId)&&hasDocumentNumber(w.externalId)&&String(w.externalId).replace(/\s/g,'')===String(row.externalId).replace(/\s/g,''))||w.title.replace(/\s/g,'')===row.title?.replace(/\s/g,''))).map(w=>({id:w.id,title:w.title,assignees:w.assignees,status:w.status}));}
