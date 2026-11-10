@@ -139,7 +139,7 @@ export function validateWork(input,settings,{importCompletion=false}={}){
 }
 export function createWork(input,settings,source=null){const w=validateWork(input,settings,{importCompletion:!!source&&classifyWorkStatus(input.status)==='완료'}),workId=id();w.externalId=resolveWorkDocumentNumber(w.externalId,workId,w.created);if(!source&&w.status==='완료'&&w.completed>(input.activityDate||w.created))throw Error('완료일은 활동일 이후일 수 없습니다.');return {...w,id:workId,version:1,updatedAt:new Date().toISOString(),source,history:[{date:w.status==='완료'?w.completed:input.activityDate||w.created,status:w.status,reason:w.reason}],activities:[{date:input.activityDate||w.created,content:w.description,source}]};}
 export function updateWork(old,input,settings,source=null){
- const importCompletion=!!source&&['예정','진행'].includes(classifyWorkStatus(old.status))&&classifyWorkStatus(input.status)==='완료';
+ const importCompletion=!!source&&['예정','진행','보류'].includes(classifyWorkStatus(old.status))&&classifyWorkStatus(input.status)==='완료';
  // 최초 엑셀 예정 기록의 업로드일은 실제 업무 발생일이 아니다.
  // 사용자가 후속 변경한 이력이 없는 경우에만 최초 상태를 등록일로 보정한다.
  if(source&&old.source&&old.history.length===1&&classifyWorkStatus(old.status)==='예정'&&classifyWorkStatus(old.history[0].status)==='예정'&&classifyWorkStatus(input.status)==='완료'&&dateOK(input.completed)&&input.completed>=old.created&&input.completed<old.history[0].date){old={...old,history:[{...old.history[0],date:old.created}]};}
@@ -188,7 +188,7 @@ function completionDescriptionMatches(previous,incoming){
  return !!before&&after.startsWith(before+'\n');
 }
 export function autoCompleteChoices(rows,works){
- const targets=rows.map(r=>{if(r.error||classifyWorkStatus(r.input.status)!=='완료')return null;const matches=works.filter(w=>['예정','진행'].includes(classifyWorkStatus(w.status))&&w.title.trim()===r.input.title.trim()&&completionDescriptionMatches(w.description,r.input.description));return matches.length===1?matches[0].id:null;});
+ const targets=rows.map(r=>{const incoming=classifyWorkStatus(r.input.status);if(r.error||!['완료','진행'].includes(incoming))return null;const matches=works.filter(w=>(incoming==='완료'?['예정','진행','보류'].includes(classifyWorkStatus(w.status)):classifyWorkStatus(w.status)==='보류')&&w.title.trim()===r.input.title.trim()&&completionDescriptionMatches(w.description,r.input.description));return matches.length===1?matches[0].id:null;});
  return rows.map((r,i)=>({...r,autoChoice:targets[i]&&targets.filter(t=>t===targets[i]).length===1?{action:'update',target:targets[i]}:null}));
 }
 export function candidates(row,works){return works.filter(w=>sameImportDescription(w.description,row.description)&&((hasDocumentNumber(row.externalId)&&hasDocumentNumber(w.externalId)&&String(w.externalId).replace(/\s/g,'')===String(row.externalId).replace(/\s/g,''))||w.title.replace(/\s/g,'')===row.title?.replace(/\s/g,''))).map(w=>({id:w.id,title:w.title,assignees:w.assignees,status:w.status}));}
