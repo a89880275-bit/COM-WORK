@@ -70,7 +70,14 @@ function reportDialog(report=null){const flow=report?.flowMetrics||(!report&&per
 function download(value,name,type='application/json'){const blob=new Blob([typeof value==='string'?value:JSON.stringify(value,null,2)],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
 function toCSV(rows){return '\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/^[=+@\-\t\r]/,"'$&").replaceAll('"','""')+'"').join(',')).join('\r\n');}
 async function safe(fn){if(busy)return;busy=true;document.body.classList.add('busy');try{await fn();}catch(e){if(e.status===401){state=null;$('#modal').close();await loginView();}else notify(e.message,true);}finally{busy=false;document.body.classList.remove('busy');}}
-function navigate(name){if(name==='보고서 보관함'){notify('보고서 보관함은 사용 중지되었습니다.');return;}if(name==='주간 업무현황'||name==='월간 업무현황'){setPeriod(name==='월간 업무현황'?'month':'week');name='주간/월간 업무보고';}if(name!=='업무 목록'&&period==='year')setPeriod('month');page=name;workAssignee='';search='';statusFilter='';if(name==='주간/월간 업무보고'&&!['week','month'].includes(period))setPeriod('week');if(name==='주간 업무현황')setPeriod('week');if(name==='월간 업무현황')setPeriod('month');render();window.scrollTo(0,0);}
+function defaultWorkAssignee(){
+ const user=state.currentUser;
+ const team=state.settings.teams.find(t=>(state.settings.people[t]||[]).includes(user.name));
+ if(!team)return '';
+ if(filters.team&&filters.team!==team)filters.team='';
+ return team+'|'+user.name;
+}
+function navigate(name){if(name==='보고서 보관함'){notify('보고서 보관함은 사용 중지되었습니다.');return;}if(name==='주간 업무현황'||name==='월간 업무현황'){setPeriod(name==='월간 업무현황'?'month':'week');name='주간/월간 업무보고';}if(name!=='업무 목록'&&period==='year')setPeriod('month');page=name;workAssignee=name==='업무 목록'?defaultWorkAssignee():'';search='';statusFilter='';if(name==='주간/월간 업무보고'&&!['week','month'].includes(period))setPeriod('week');if(name==='주간 업무현황')setPeriod('week');if(name==='월간 업무현황')setPeriod('month');render();window.scrollTo(0,0);}
 function collectMapping(){upload.weeklyOnly=$('#weekly-only').checked;upload.weekLabel=$('#week-label').value;upload.period=$('#upload-period').value;upload.kind=$('#upload-kind').value;upload.statusText=$('#status-map').value;upload.selected=[...document.querySelectorAll('[data-sheet]:checked')].map(e=>e.dataset.sheet);upload.commonHeader=Number($('#common-header').value);upload.assigneeSource=$('#assignee-source').value;upload.commonMap=Object.fromEntries([...document.querySelectorAll('[data-common-map]')].map(e=>[e.dataset.commonMap,Number(e.value)]));}
 function bind(){
  if($('#service-report'))$('#service-report').onclick=()=>safe(()=>openMonthlyServiceReport({month:filters.from.slice(0,7),api,openDialog,esc,safe,currentUser:state.currentUser,onSaved:revision=>{state.revision=revision;}}));
