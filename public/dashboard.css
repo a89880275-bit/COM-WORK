@@ -62,7 +62,7 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=month]::-webkit-c
 
 /* Dashboard and report count cards share the same hover treatment. */
 :is(.annual-kpis,.flow-kpis)>.panel{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
-:is(.annual-kpis,.flow-kpis)>.panel:hover{background:#fff;border-color:#f5b583;box-shadow:0 0 0 1px #f5b583}
-:is(.annual-kpis,.flow-kpis)>.panel:hover>span{color:#334155}
-:is(.annual-kpis,.flow-kpis)>.panel:hover>p{color:#52647a}
+:is(.annual-kpis,.flow-kpis)>.panel:hover{background:rgba(255,255,255,.3);border-color:#f5b583;box-shadow:0 0 0 1px #f5b583}
+:is(.annual-kpis,.flow-kpis)>.panel:hover>span{color:#f1f5f9}
+:is(.annual-kpis,.flow-kpis)>.panel:hover>p{color:#d3dfed}
 @media(prefers-reduced-motion:reduce){:is(.annual-kpis,.flow-kpis)>.panel{transition:none}}
