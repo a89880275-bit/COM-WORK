@@ -59,3 +59,10 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=month]::-webkit-c
 .html-work-picker p{font-size:13px;line-height:1.8;margin:16px 0}.html-work-review{white-space:normal;margin:0 0 14px;font-size:12px;line-height:1.7}.html-work-review p{margin:5px 0}.html-work-duplicates{padding:10px;margin:8px 0;border:1px solid #996945;border-radius:6px}.html-work-duplicates .checkbox-label{display:flex;flex-direction:row;align-items:center;gap:8px;color:#ffd192}.html-work-duplicates .text-button{white-space:normal;text-align:left}
 
 .upload-validation-top{display:flex;justify-content:flex-end;margin:16px 0 8px}
+
+/* Dashboard and report count cards share the same hover treatment. */
+:is(.annual-kpis,.flow-kpis)>.panel{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
+:is(.annual-kpis,.flow-kpis)>.panel:hover{background:#fff;border-color:#f5b583;box-shadow:0 0 0 1px #f5b583}
+:is(.annual-kpis,.flow-kpis)>.panel:hover>span{color:#334155}
+:is(.annual-kpis,.flow-kpis)>.panel:hover>p{color:#52647a}
+@media(prefers-reduced-motion:reduce){:is(.annual-kpis,.flow-kpis)>.panel{transition:none}}
