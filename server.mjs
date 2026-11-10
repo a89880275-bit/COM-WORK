@@ -39,7 +39,7 @@ function mappedRows(staged,options){
    const input=prepareImportedWork({title:get('title'),isMajor:(raw.redColumns||[]).includes(Number(map.title)),assignees,status,category,created:normalizeDate(get('created'))||options.period,activityDate:options.period,completed:normalizeDate(get('completed')),requestDept:get('requestDept'),requestContact:Number(map.requestContact??-1)>=0?get('requestContact'):undefined,description:get('description'),reason:get('reason'),kind:options.kind||'개발업무',externalId:get('externalId')},options.period);
    Object.assign(input,prepareScheduledImport(input,get('week')));
    if(options.historical)input.activityDate=input.completed;
-   let error='';try{validateImportStatusDate(input,get('week'));createWork(input,store.settings);}catch(e){error=e.message;}
+   let error='';try{validateImportStatusDate(input,get('week'));createWork(input,store.settings,{sheet:sheet.name,row:raw.number});}catch(e){error=e.message;}
    const key=`${sheet.name}:${raw.number}`;result.push({key,sheet:sheet.name,row:raw.number,raw:raw.cells,input,error,week:get('week'),candidates:error?[]:candidates(input,store.works)});
   }
  }

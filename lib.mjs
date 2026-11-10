@@ -119,14 +119,14 @@ export function validateImportStatusDate(input,week){
  if(String(week||'').replace(/\s/g,'')==='예정'||classifyWorkStatus(input.status)==='보류')return;
  if(classifyWorkStatus(input.status)!=='완료'&&String(input.completed||'').trim())throw Error('상태는 미완료인데 완료일이 입력되어 있습니다. 실제 완료라면 상태를 완료로, 미완료라면 완료일을 비운 뒤 다시 검증하세요.');
 }
-export function validateWork(input,settings){
+export function validateWork(input,settings,{importCompletion=false}={}){
  input={...input,status:classifyWorkStatus(input.status)};
  const title=String(input.title||'').trim();if(!title||title.length>300)throw Error('업무 제목은 1~300자로 입력해 주세요.');
  const assignees=Array.isArray(input.assignees)?input.assignees:[];
  if(!assignees.length||assignees.some(a=>!settings.teams.includes(a.team)||!settings.people[a.team]?.includes(a.name)))throw Error('등록된 파트와 담당자를 선택해 주세요.');
  if(!statuses.includes(input.status)||!settings.categories.includes(input.category))throw Error('상태 또는 업무구분을 확인해 주세요.');
  if(!dateOK(input.created)||!dateOK(input.activityDate||input.created))throw Error('등록일과 활동일을 확인해 주세요.');
- if((input.activityDate||input.created)<input.created)throw Error('활동일은 등록일 이후여야 합니다.');
+ if(!importCompletion&&(input.activityDate||input.created)<input.created)throw Error('활동일은 등록일 이후여야 합니다.');
  if(input.due&&!dateOK(input.due))throw Error('목표일을 확인해 주세요.');
  if(input.completed&&!dateOK(input.completed))throw Error('완료일의 날짜 형식을 확인해 주세요.');
  if(input.completed&&input.completed<input.created)throw Error('완료일은 등록일과 같거나 이후여야 합니다.');
@@ -134,22 +134,23 @@ export function validateWork(input,settings){
  const progress=input.progress===''||input.progress===undefined||input.progress===null?null:Number(input.progress);
  if(progress!==null&&(!Number.isInteger(progress)||progress<0||progress>100))throw Error('진행률은 0~100 사이의 정수로 입력해 주세요.');
  if(input.status!=='완료'&&progress===100)throw Error('진행률 100%는 완료 상태로 저장해 주세요.');
- if(input.started&&(!dateOK(input.started)||input.started<input.created||input.started>(input.activityDate||today())))throw Error('시작일은 등록일 이후, 활동일 이전이어야 합니다.');
+ if(input.started&&(!dateOK(input.started)||input.started<input.created||!importCompletion&&input.started>(input.activityDate||today())))throw Error('시작일은 등록일 이후, 활동일 이전이어야 합니다.');
  return {title,externalId:String(input.externalId||'').trim().slice(0,200),isMajor:input.isMajor===true,assignees:assignees.map(a=>({team:a.team,name:a.name})),category:input.category,status:input.status,created:input.created,started:input.started||'',progress:input.status==='완료'?100:progress,requestDept:String(input.requestDept||'').slice(0,100),requestContact:String(input.requestContact||'').slice(0,100),equipmentType:String(input.equipmentType||'').slice(0,100),due:input.due||'',completed:input.status==='완료'?(input.completed||input.activityDate||today()):'',description:String(input.description||'').slice(0,20000),reason:String(input.reason||'').slice(0,2000),tags:String(input.tags||'').slice(0,1000),kind:input.kind==='장비지원'?'장비지원':'개발업무'};
 }
-export function createWork(input,settings,source=null){const w=validateWork(input,settings),workId=id();w.externalId=resolveWorkDocumentNumber(w.externalId,workId,w.created);if(w.status==='완료'&&w.completed>(input.activityDate||w.created))throw Error('완료일은 활동일 이후일 수 없습니다.');return {...w,id:workId,version:1,updatedAt:new Date().toISOString(),source,history:[{date:w.status==='완료'?w.completed:input.activityDate||w.created,status:w.status,reason:w.reason}],activities:[{date:input.activityDate||w.created,content:w.description,source}]};}
+export function createWork(input,settings,source=null){const w=validateWork(input,settings,{importCompletion:!!source&&classifyWorkStatus(input.status)==='완료'}),workId=id();w.externalId=resolveWorkDocumentNumber(w.externalId,workId,w.created);if(!source&&w.status==='완료'&&w.completed>(input.activityDate||w.created))throw Error('완료일은 활동일 이후일 수 없습니다.');return {...w,id:workId,version:1,updatedAt:new Date().toISOString(),source,history:[{date:w.status==='완료'?w.completed:input.activityDate||w.created,status:w.status,reason:w.reason}],activities:[{date:input.activityDate||w.created,content:w.description,source}]};}
 export function updateWork(old,input,settings,source=null){
+ const importCompletion=!!source&&['예정','진행'].includes(classifyWorkStatus(old.status))&&classifyWorkStatus(input.status)==='완료';
  // 최초 엑셀 예정 기록의 업로드일은 실제 업무 발생일이 아니다.
  // 사용자가 후속 변경한 이력이 없는 경우에만 최초 상태를 등록일로 보정한다.
  if(source&&old.source&&old.history.length===1&&classifyWorkStatus(old.status)==='예정'&&classifyWorkStatus(old.history[0].status)==='예정'&&classifyWorkStatus(input.status)==='완료'&&dateOK(input.completed)&&input.completed>=old.created&&input.completed<old.history[0].date){old={...old,history:[{...old.history[0],date:old.created}]};}
  const effective=structuredClone(settings);
  for(const a of old.assignees){if(!effective.people[a.team]?.includes(a.name))effective.people[a.team]=[...(effective.people[a.team]||[]),a.name];}
  if(!effective.categories.includes(old.category))effective.categories.push(old.category);
- const w=validateWork({...input,isMajor:input.isMajor??old.isMajor,started:input.started??old.started,requestDept:input.requestDept??old.requestDept,requestContact:input.requestContact??old.requestContact,externalId:input.externalId??old.externalId,equipmentType:input.equipmentType??old.equipmentType,progress:input.progress===undefined&&input.status===old.status?old.progress:input.progress},effective),date=input.activityDate||today();
+ const w=validateWork({...input,isMajor:input.isMajor??old.isMajor,started:input.started??old.started,requestDept:input.requestDept??old.requestDept,requestContact:input.requestContact??old.requestContact,externalId:input.externalId??old.externalId,equipmentType:input.equipmentType??old.equipmentType,progress:input.progress===undefined&&input.status===old.status?old.progress:input.progress},effective,{importCompletion}),date=input.activityDate||today();
  w.externalId=resolveWorkDocumentNumber(w.externalId,old.id,w.created,old.externalId);
- if(date<old.created||date<(old.history.at(-1)?.date||old.created))throw Error('최근 상태 이력보다 이전 날짜로 변경할 수 없습니다.');
+ if(!importCompletion&&(date<old.created||date<(old.history.at(-1)?.date||old.created)))throw Error('최근 상태 이력보다 이전 날짜로 변경할 수 없습니다.');
  const statusDate=w.status==='완료'?w.completed:date;
- if(w.status==='완료'&&(statusDate>date||old.status!=='완료'&&statusDate<(old.history.at(-1)?.date||old.created)))throw Error('완료일은 최근 상태 이력 이후, 활동일 이전이어야 합니다.');
+ if(!importCompletion&&w.status==='완료'&&(statusDate>date||old.status!=='완료'&&statusDate<(old.history.at(-1)?.date||old.created)))throw Error('완료일은 최근 상태 이력 이후, 활동일 이전이어야 합니다.');
  if(old.status==='완료'&&w.status!=='완료'&&!w.reason.trim())throw Error('완료 업무를 재오픈할 때는 사유가 필요합니다.');
  if(old.status==='완료'&&w.status==='완료'&&old.completed!==w.completed)throw Error('완료일 변경은 재오픈한 뒤 다시 완료 처리해 주세요.');
  return {...old,...w,version:old.version+1,updatedAt:new Date().toISOString(),history:[...old.history,...(old.status!==w.status?[{date:statusDate,status:w.status,reason:w.reason}]:[])],activities:[...old.activities,{date,content:w.reason||w.description,source}]};
