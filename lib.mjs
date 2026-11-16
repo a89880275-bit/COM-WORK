@@ -4,7 +4,7 @@ export const categories=['오류수정','기능개선','신규개발','데이터
 export const statuses=['접수','진행','완료','예정','보류','취소'];
 export const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 export const id=()=>globalThis.crypto.randomUUID();
-export function hasDocumentNumber(value){const text=String(value||'').replace(/\s/g,'');return !!text&&text!=='내부문서';}
+export function hasDocumentNumber(value){const text=String(value||'').replace(/\s/g,'');return !!text&&!['내부','내부문서'].includes(text);}
 export function resolveWorkDocumentNumber(value,workId,created,existing=''){
  if(hasDocumentNumber(value))return String(value).trim();
  if(hasDocumentNumber(existing))return String(existing).trim();
@@ -182,15 +182,19 @@ export function selectWorks(works,{from='0000-01-01',to='9999-12-31',asOf=to,bas
  return works.map(w=>({...w,status:statusAt(w,asOf)})).filter(w=>w.status&&(w.status!=='취소'||status==='취소')&&w.created<=asOf&&(!team||w.assignees.some(a=>a.team===team))&&(!status||(status==='기타'?['접수','예정','보류'].includes(w.status):w.status===status))&&(!kind||w.kind===kind)&&(!q||`${w.title} ${w.id} ${w.externalId||''} ${w.assignees.map(a=>a.name)} ${w.requestContact||''} ${w.tags}`.toLowerCase().includes(q.toLowerCase()))&&(basis==='activity'?w.activities.some(a=>a.date>=from&&a.date<=to&&a.date<=asOf):basis==='completed'?w.history.some(h=>h.status==='완료'&&h.date>=from&&h.date<=to&&h.date<=asOf):w.created>=from&&w.created<=to));
 }
 export function metrics(works){const counts=Object.fromEntries(statuses.map(s=>[s,works.filter(w=>classifyWorkStatus(w.status)===s).length]));return {total:works.length,...counts,rate:works.length?Math.round(counts['완료']/works.length*100):null,participations:works.reduce((s,w)=>s+new Set(w.assignees.map(a=>a.team)).size,0)};}
-function sameImportDescription(a,b){return String(a||'').replace(/\r\n?/g,'\n').trim()===String(b||'').replace(/\r\n?/g,'\n').trim();}
-function completionDescriptionMatches(previous,incoming){
- if(sameImportDescription(previous,incoming))return true;
- const before=String(previous||'').replace(/\r\n?/g,'\n').trim();
- const after=String(incoming||'').replace(/\r\n?/g,'\n').trim();
- return !!before&&after.startsWith(before+'\n');
+function sameImportIdentity(row,work){
+ const number=value=>String(value||'').replace(/\s/g,'');
+ if(hasDocumentNumber(row.externalId))return hasDocumentNumber(work.externalId)&&number(row.externalId)===number(work.externalId);
+ const title=String(row.title||'').trim();
+ return !!title&&title===String(work.title||'').trim();
 }
 export function autoCompleteChoices(rows,works){
- const targets=rows.map(r=>{const incoming=classifyWorkStatus(r.input.status);if(r.error||!['완료','진행'].includes(incoming))return null;const matches=works.filter(w=>(incoming==='완료'?['예정','진행','보류'].includes(classifyWorkStatus(w.status)):classifyWorkStatus(w.status)==='보류')&&w.title.trim()===r.input.title.trim()&&completionDescriptionMatches(w.description,r.input.description));return matches.length===1?matches[0].id:null;});
+ const openStates=['예정','진행','보류'];
+ const targets=rows.map(r=>{
+  if(r.error||!['예정','진행','보류','완료'].includes(classifyWorkStatus(r.input.status)))return null;
+  const matches=works.filter(w=>openStates.includes(classifyWorkStatus(w.status))&&sameImportIdentity(r.input,w));
+  return matches.length===1?matches[0].id:null;
+ });
  return rows.map((r,i)=>({...r,autoChoice:targets[i]&&targets.filter(t=>t===targets[i]).length===1?{action:'update',target:targets[i]}:null}));
 }
-export function candidates(row,works){return works.filter(w=>sameImportDescription(w.description,row.description)&&((hasDocumentNumber(row.externalId)&&hasDocumentNumber(w.externalId)&&String(w.externalId).replace(/\s/g,'')===String(row.externalId).replace(/\s/g,''))||w.title.replace(/\s/g,'')===row.title?.replace(/\s/g,''))).map(w=>({id:w.id,title:w.title,assignees:w.assignees,status:w.status}));}
+export function candidates(row,works){return works.filter(w=>sameImportIdentity(row,w)).map(w=>({id:w.id,title:w.title,assignees:w.assignees,status:w.status}));}

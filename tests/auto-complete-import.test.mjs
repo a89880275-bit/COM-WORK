@@ -30,11 +30,11 @@ for(const status of ['예정','진행','개발중'])test(status+' 업무에 여�
  const input={...old,status:'완료',description:'기존 내용\n추가1\n추가2'};
  assert.deepEqual(autoCompleteChoices([{input}],[old])[0].autoChoice,{action:'update',target:'1'});
 });
-test('내용 수정·삭제·빈 기존 내용과 복수 후보는 자동 연결하지 않는다',()=>{
+test('내용 차이는 무시하지만 복수 후보는 자동 연결하지 않는다',()=>{
  const old={id:'1',title:'업무',status:'진행',description:'기존 내용'};
- for(const description of ['다른 내용','기존','기존 내용 수정'])assert.equal(autoCompleteChoices([{input:{...old,status:'완료',description}}],[old])[0].autoChoice,null);
+ for(const description of ['다른 내용','기존','기존 내용 수정'])assert.deepEqual(autoCompleteChoices([{input:{...old,status:'완료',description}}],[old])[0].autoChoice,{action:'update',target:old.id});
  const row={input:{...old,status:'완료',description:'기존 내용\n추가'}};
- assert.equal(autoCompleteChoices([row],[{...old,description:''}])[0].autoChoice,null);
+ assert.deepEqual(autoCompleteChoices([row],[{...old,description:''}])[0].autoChoice,{action:'update',target:old.id});
  assert.equal(autoCompleteChoices([row],[old,{...old,id:'2',status:'예정'}])[0].autoChoice,null);
 });
 
@@ -60,5 +60,5 @@ for(const status of ['진행','완료'])test('보류 업무를 '+status+' 상태
  const updated=updateWork(old,input,settings,{sheet:'담당자',row:2});assert.equal(updated.id,old.id);assert.equal(updated.status,status);assert.equal(updated.description,input.description);
  assert.equal(autoCompleteChoices([{input}],[old,{...old,id:'2'}])[0].autoChoice,null);
  assert.equal(autoCompleteChoices([{input},{input}],[old])[0].autoChoice,null);
- assert.equal(autoCompleteChoices([{input:{...input,description:'변경 내용'}}],[old])[0].autoChoice,null);
+ assert.deepEqual(autoCompleteChoices([{input:{...input,description:'변경 내용'}}],[old])[0].autoChoice,{action:'update',target:old.id});
 });
