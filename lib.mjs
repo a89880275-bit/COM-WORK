@@ -62,8 +62,10 @@ export function filterByAssignee(works,key=''){
  return works.filter(w=>w.assignees.some(a=>a.team+'|'+a.name===key));
 }
 export function sortWorkList(works){
+ const priority={'예정':0,'진행':1,'완료':2,'보류':3};
+ const rank=w=>priority[classifyWorkStatus(w.status)]??4;
  const date=w=>classifyWorkStatus(w.status)==='완료'&&dateOK(w.completed)?w.completed:w.created||'';
- return [...works].sort((a,b)=>Number(classifyWorkStatus(b.status)==='예정')-Number(classifyWorkStatus(a.status)==='예정')||date(b).localeCompare(date(a))||(b.created||'').localeCompare(a.created||'')||String(a.id).localeCompare(String(b.id)));
+ return [...works].sort((a,b)=>rank(a)-rank(b)||date(b).localeCompare(date(a))||(b.created||'').localeCompare(a.created||'')||String(a.id).localeCompare(String(b.id)));
 }
 export function reportEligibleWorks(works,departedNames=[]){
  const departed=new Set(departedNames);
