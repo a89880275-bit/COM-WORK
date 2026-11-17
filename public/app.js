@@ -61,7 +61,7 @@ function openDialog(html){const d=$('#modal');d.classList.remove('work-detail-di
 function workDialog(w=null,draft=null){const current=w?state.works.find(a=>a.id===w.id):null;const data=current||{title:'',category:state.settings.categories[0],status:'예정',created:state.today,due:'',completed:'',assignees:state.currentUser.role==='staff'?[{name:state.currentUser.name,team:state.currentUser.team}]:[],description:'',tags:'',kind:'개발업무',reason:'',...(draft||{})};
  openDialog(`<div class="dialog-head"><div><div class="eyebrow">WORK ITEM ${current?'· '+current.id.slice(0,8):''}</div><h2>${current?'업무 상세 및 수정':'새 업무 등록'}</h2></div><button data-close aria-label="닫기">✕</button></div><form id="work-form"><div class="dialog-body"><label>업무 제목 *<input name="title" required maxlength="300" value="${esc(data.title)}" placeholder="어떤 업무인가요?"></label><div class="form-grid"><label>업무구분<select name="category">${opt([...new Set([...state.settings.categories,data.category])],data.category)}</select></label><label>상태<select name="status">${opt(statuses.filter(s=>s!=='접수'),data.status)}</select></label><label>등록일<input type="date" required name="created" value="${data.created}" ${current?'readonly':''}></label><label>활동·변경일<input type="date" required name="activityDate" value="${state.today}"></label><label>목표일<input type="date" name="due" value="${data.due}"></label><label>완료일<input type="date" name="completed" value="${data.completed}"></label><label>업무유형<select name="kind">${opt(['개발업무','장비지원'],data.kind)}</select></label><label>태그<input name="tags" value="${esc(data.tags)}" placeholder="보안, 모바일"></label></div><label>공동담당 * <span class="subtle">담당 당시 파트를 함께 저장합니다.</span></label><div class="assignee-grid">${state.settings.teams.map(t=>`<fieldset><legend>${t}</legend>${[...new Set([...state.settings.people[t],...data.assignees.filter(a=>a.team===t).map(a=>a.name)])].map(n=>`<label><input type="checkbox" name="assignee" value="${esc(t+'|'+n)}" ${data.assignees.some(a=>a.team===t&&a.name===n)?'checked':''}>${esc(n)}</label>`).join('')}</fieldset>`).join('')}</div><label>업무 내용<textarea rows="4" name="description">${esc(data.description)}</textarea></label><label>변경·보류 사유 <span class="subtle">보류 및 완료 후 재오픈 시 필수</span><input name="reason" value="${esc(data.reason)}"></label>${current?`<details open><summary>상태 변경 이력 · ${current.history.length}건</summary><div class="history">${[...current.history].reverse().map(h=>`<div><span>${h.date}</span>${badge(h.status)}<span>${esc(h.reason)||'—'}</span></div>`).join('')}</div></details><details><summary>주차별 활동 및 원본 · ${current.activities.length}건</summary><div class="history">${[...current.activities].reverse().map(a=>`<div><span>${a.date}</span><div>${esc(a.content)||'활동 기록'}<small>${a.source?`${esc(a.source.filename)} / ${esc(a.source.sheet)} / ${a.source.row}행`:'직접 입력'}</small></div></div>`).join('')}</div></details>`:''}</div><div class="dialog-actions"><span id="form-error" class="red" role="alert"></span><button type="submit" class="primary">${current?'변경 저장':'업무 등록'}</button></div></form>`);
  addWorkFields(data);
- compactWorkLayout();
+ compactWorkLayout(!current);
  applyWorkPermissions(current);
  if(draft?.htmlDocument)attachHtmlWorkReview(draft);
  $('#work-form').onsubmit=async e=>{e.preventDefault();const form=new FormData(e.target),input=Object.fromEntries(form);input.isMajor=form.has('isMajor');if(draft?.htmlDocument){input.htmlDocument=true;input.htmlFilename=draft.htmlFilename;input.allowDuplicateDocument=form.has('allowDuplicateDocument');}input.assignees=form.getAll('assignee').map(v=>{const [team,name]=v.split('|');return {team,name};});if(current)input.version=current.version;const btn=e.submitter;btn.disabled=true;try{await api(current?'/api/works/'+current.id:'/api/works',current?'PUT':'POST',input);$('#modal').close();await refresh();notify('업무를 파일에 저장했습니다.');}catch(err){$('#form-error').textContent=err.message;}finally{btn.disabled=false;}};
@@ -131,10 +131,19 @@ function addWorkFields(data){
  const status=$('#work-form [name="status"]'),progress=$('#work-form [name="progress"]');
  status.addEventListener('change',()=>{if(status.value==='완료')progress.value='100';else if(progress.value==='100')progress.value='';});
 }
-function compactWorkLayout(){
+function compactWorkLayout(isNew=false){
  const dialog=$('#modal'),form=$('#work-form'),body=form.querySelector('.dialog-body'),grid=form.querySelector('.form-grid');
  dialog.classList.add('work-detail-dialog');
  for(const name of ['category','status','kind','isMajor','progress','requestDept','requestContact','externalId','equipmentType','created','started','due','completed','activityDate','tags']){const label=form.querySelector(`[name="${name}"]`)?.closest('label');if(label)grid.append(label);}
+ if(isNew){
+  grid.classList.add('new-work-primary-row');
+  const dates=document.createElement('div');dates.className='form-grid new-work-date-row';
+  const other=document.createElement('div');other.className='form-grid new-work-other-row';
+  grid.after(dates,other);
+  for(const name of ['category','status','kind','isMajor','progress','requestDept','requestContact','externalId'])grid.append(form.querySelector(`[name="${name}"]`).closest('label'));
+  for(const name of ['created','started','due','completed','activityDate','tags'])dates.append(form.querySelector(`[name="${name}"]`).closest('label'));
+  other.append(form.querySelector('[name="equipmentType"]').closest('label'));
+ }
  const notes=document.createElement('div');notes.className='work-notes';
  const description=form.querySelector('[name="description"]').closest('label'),reason=form.querySelector('[name="reason"]').closest('label');
  description.before(notes);notes.append(description,reason);

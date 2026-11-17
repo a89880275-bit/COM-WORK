@@ -71,3 +71,9 @@ input[type=date]::-webkit-calendar-picker-indicator,input[type=month]::-webkit-c
 :is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel{transition:background-color .18s ease,border-color .18s ease,box-shadow .18s ease}
 :is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel:hover{border-color:#f5b583;box-shadow:0 0 0 1px #f5b583}
 @media(prefers-reduced-motion:reduce){:is(.annual-summary-row,.annual-person-comparison,.category-graphs)>.panel{transition:none}}
+
+/* New-work form: metadata and dates occupy separate desktop rows. */
+.work-detail-dialog .new-work-primary-row{grid-template-columns:.9fr .65fr .85fr 1.35fr .65fr 1fr .9fr 1.5fr}
+.work-detail-dialog .new-work-date-row{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:1000px){.work-detail-dialog .new-work-primary-row{grid-template-columns:repeat(4,minmax(0,1fr))}.work-detail-dialog .new-work-date-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:520px){.work-detail-dialog .new-work-primary-row,.work-detail-dialog .new-work-date-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
